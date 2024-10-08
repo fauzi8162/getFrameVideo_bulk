@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ambil Frame dari Banyak Video</title>
+</head>
+<body>
+    <h2>Ambil Frame dari Video to Image (BULK version)</h2>
+    <h4>pastikan allow download multiple</h4>
+    <!-- Input untuk memilih banyak video -->
+    <input type="file" id="videoInput" accept="video/*" multiple>
+    <br><br>
+	
+	<!-- Tombol untuk mengambil frame pertama dari semua video -->
+    <button id="captureAllFrames">Download Frame Pertama dari Semua Video</button>
+    
+    <!-- Canvas untuk memproses frame video -->
+    <canvas id="canvas"></canvas>
+    <br><br>
+    
+    <script>
+        const videoInput = document.getElementById('videoInput');
+        const captureAllFramesButton = document.getElementById('captureAllFrames');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+		canvas.style.display = "none"; // canvas dihide
+        /**
+         * Fungsi untuk mengambil frame pertama dari sebuah video
+         * @param {File} file - File video yang diunggah
+         * @returns {Promise<{name: string, blob: Blob}>} - Nama file PNG dan Blob gambar
+         */
+        function captureFirstFrame(file) {
+            return new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                video.src = URL.createObjectURL(file);
+                video.muted = true;
+                video.playsInline = true; // Untuk perangkat mobile
+                video.crossOrigin = "anonymous"; // Menghindari masalah CORS
+
+                // Handler untuk ketika metadata video telah dimuat
+                video.addEventListener('loadedmetadata', () => {
+                    // Set ukuran canvas sesuai dengan ukuran video
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    // Posisikan video ke waktu 0 (frame pertama)
+                    video.currentTime = 0;
+                }, { once: true });
+
+                // Handler untuk ketika video telah di-seek ke waktu yang diinginkan
+                video.addEventListener('seeked', () => {
+                    // Gambar frame video ke canvas
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Konversi canvas ke Blob PNG
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            // Buat nama file PNG berdasarkan nama video
+                            const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                            const imageName = `${baseName}.png`;
+                            resolve({ name: imageName, blob: blob });
+                        } else {
+                            reject(new Error('Gagal mengonversi canvas ke Blob.'));
+                        }
+                    }, 'image/png');
+                }, { once: true });
+
+                // Handler untuk error saat memuat video
+                video.addEventListener('error', (e) => {
+                    reject(new Error('Terjadi kesalahan saat memuat video.'));
+                }, { once: true });
+
+                // Muat video
+                video.load();
+            });
+        }
+
+        /**
+         * Fungsi untuk mendownload Blob sebagai file
+         * @param {Blob} blob - Blob yang akan didownload
+         * @param {string} fileName - Nama file yang diinginkan
+         */
+        function downloadBlob(blob, fileName) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        /**
+         * Fungsi utama untuk memproses semua video dan mendownload gambar
+         */
+        async function processAllVideos() {
+            const files = videoInput.files;
+            if (!files.length) {
+                alert('Silakan pilih setidaknya satu file video terlebih dahulu.');
+                return;
+            }
+
+            // Konfirmasi pengguna jika ingin mendownload banyak file
+            if (!confirm(`Anda akan mendownload ${files.length} file gambar. Lanjutkan?`)) {
+                return;
+            }
+
+            // Loop melalui setiap file video dan proses satu per satu
+            for (const file of files) {
+                try {
+                    const { name, blob } = await captureFirstFrame(file);
+                    downloadBlob(blob, name);
+                } catch (error) {
+                    console.error(`Gagal memproses ${file.name}:`, error);
+                    alert(`Gagal memproses ${file.name}.`);
+                }
+            }
+
+            alert('Semua frame telah berhasil didownload.');
+        }
+
+        // Event listener untuk tombol captureAllFrames
+        captureAllFramesButton.addEventListener('click', processAllVideos);
+    </script>
+</body>
+</html>

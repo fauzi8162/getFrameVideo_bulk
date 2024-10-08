@@ -4,7 +4,7 @@ sebuah tools untuk capture frame pada video menjadi file image secara masal
 <br>
 
 `deploy this project:` 
-"https://fauzi8162.github.io/getFrameVideo/"
+"https://fauzi8162.github.io/getFrameVideo_bulk"
 
 `source :`
 "https://github.com/fauzi8162/getFrameVideo_bulk"
